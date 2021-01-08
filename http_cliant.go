@@ -8,21 +8,51 @@ import (
   "net/http"
   "io/ioutil"
 	"crypto/sha256"
+	"encoding/json"
 )
 
+const APIEndpoint = "http://c3.d.takoyaki3.com:11182/"
+
+type FileInfos struct{
+	List []FileInfo `json:"list"`
+}
+
+type FileInfo struct{
+	FileName string `json:"filename"`
+	Path string	`json:"path"`
+	Directory string `json:"directory"`
+}
+
 func main() {
-  // url := "http://c3.d.takoyaki3.com:11180/get_file?index=68.9e70bf68a95602c9100347ae67287ebc9f607334108a07123efdf37fc81e8645.0"
 
-	sign := Sign()
+	// ファイルリストを取得
+	infos := GetList("./data")
 
-	url := "http://localhost:11180/auth?sign="+sign
+	// ファイルを順繰りに取得
+	for _,v := range infos.List{
+		fmt.Println(v.Path)
+		os.MkdirAll(v.Directory,0777)
+		raw := GetHTTP(APIEndpoint+"download?sign="+Sign()+"&path="+v.Path)
+		WriteByte(v.Path,raw)
+		GetHTTP(APIEndpoint+"remove?sign="+Sign()+"&path="+v.Path)
+	}
+}
+
+func GetHTTP(url string)[]byte{
   resp, _ := http.Get(url)
   defer resp.Body.Close()
-
 	byteArray, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println(byteArray)
-	WriteByte("out.mp4",byteArray)
-  fmt.Println(string(byteArray)) // htmlをstringで取得
+	return byteArray
+}
+
+func GetList(path string)FileInfos{
+	var infos FileInfos
+	raw := GetHTTP(APIEndpoint+"getlist?sign="+Sign()+"&path="+path)
+	fmt.Println(APIEndpoint+"getlist?sign="+Sign()+"&path="+path)
+	if err := json.Unmarshal(raw, &infos); err != nil {
+		log.Fatal(err)
+	}
+	return infos
 }
 
 func WriteByte(path string,rowData []byte){
@@ -49,7 +79,6 @@ func readFileAsBytes(path string)[]byte{
 
 	info,_:=file.Stat()
 	buf := make([]byte,info.Size())
-	fmt.Println(info.Size())
 
 	file.Read(buf)
 	return buf

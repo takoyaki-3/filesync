@@ -9,16 +9,19 @@ import (
 	"bytes"
 	"net/http"
 	"crypto/sha256"
-	"github.com/takoyaki-3/goc"
+	"encoding/json"
+	"path/filepath"
+	"io/ioutil"
 )
 
-type FileList struct{
-	Files FileInfo `json:"file_infos"`
+type FileInfos struct{
+	List []FileInfo `json:"list"`
 }
 
 type FileInfo struct{
-	name string
-
+	FileName string `json:"filename"`
+	Path string	`json:"path"`
+	Directory string `json:"directory"`
 }
 
 func main(){
@@ -35,7 +38,7 @@ func main(){
 	// http.Serverのオブジェクトを確保
 	// &をつけること構造体ではなくポインタを返却
 	server := &http.Server{}; // or new (http.Server);
-	server.Addr = ":11180";
+	server.Addr = ":11182";
 	server.Handler = mux;
 	server.ListenAndServe();
 }
@@ -91,8 +94,26 @@ func getlist(w http.ResponseWriter, r *http.Request) {
 	queryparm := r.URL.Query()
 
 	if v,ok:=queryparm["path"];ok{
-		paths,filenames:=goc.Dirwalk(v[0])
-		fmt.Fprintln(w, paths,filenames);
+		paths,filenames,directories:=dirwalk(v[0])
+
+		filelist := []FileInfo{}
+
+		for k,p:=range paths{
+			fi := FileInfo{}
+			fi.Path = p
+			fi.FileName = filenames[k]
+			fi.Directory = directories[k]
+			filelist = append(filelist, fi)
+		}
+
+		resp := FileInfos{}
+		resp.List = filelist
+
+		outputJson, err := json.Marshal(&resp)
+		if err != nil{
+			log.Fatalln(err)
+		}
+		fmt.Fprintln(w, string(outputJson));
 	}
 }
 
@@ -109,6 +130,29 @@ func remove(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintln(w, "hello, world.");
 		}
 	}
+}
+
+func dirwalk(dir string) ([]string,[]string,[]string) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		panic(err)
+	}
+
+	var paths,filenames,directories []string
+	for _, file := range files {
+		if file.IsDir() {
+			p,f,d := dirwalk(filepath.Join(dir, file.Name()))
+			paths = append(paths, p...)
+			filenames = append(filenames, f...)
+			directories = append(directories, d...)
+			continue
+		}
+		paths = append(paths, filepath.Join(dir, file.Name()))
+		filenames = append(filenames, file.Name())
+		directories = append(directories, dir)
+	}
+
+	return paths,filenames,directories
 }
 
 func readFileAsBytes(path string)[]byte{
