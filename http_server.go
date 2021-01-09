@@ -64,7 +64,21 @@ func upload(w http.ResponseWriter, r *http.Request) {
 	if !Authentication(w,r){
 		return
 	}
-	fmt.Fprintln(w, "hello, world.");
+	// このハンドラ関数へのアクセスはPOSTメソッドのみ認める
+	if  (r.Method != "POST") {
+		fmt.Fprintln(w, "Please access by POST.");
+		return;
+	}
+	buf := bytes.NewBuffer(nil)
+	if _, err := io.Copy(buf, r.Body); err != nil {
+    // return nil, err
+	}
+
+	queryparm := r.URL.Query()
+	if v,ok:=queryparm["path"];ok{
+		WriteByte(v[0],buf.Bytes())
+		fmt.Fprintln(w, "uploaded.");
+	}
 }
 
 func download(w http.ResponseWriter, r *http.Request) {
@@ -153,6 +167,20 @@ func dirwalk(dir string) ([]string,[]string,[]string) {
 	}
 
 	return paths,filenames,directories
+}
+
+func WriteByte(path string,rowData []byte){
+	wf, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer wf.Close()
+
+	// データ部分を書き込み
+	_, err = wf.Write(rowData)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func readFileAsBytes(path string)[]byte{
