@@ -196,6 +196,11 @@ func getlist(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func Exists(name string) bool {
+	_, err := os.Stat(name)
+	return !os.IsNotExist(err)
+}
+
 func remove(w http.ResponseWriter, r *http.Request) {
 	if !Authentication(w,r){
 		return
@@ -203,10 +208,14 @@ func remove(w http.ResponseWriter, r *http.Request) {
 	queryparm := r.URL.Query()
 
 	if v,ok:=queryparm["path"];ok{
-		if err := os.Remove(v[0]); err != nil {
-			fmt.Println(err)
+		if Exists(v[0]) {
+			if err := os.Remove(v[0]); err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Fprintln(w, "success.");
+			}	
 		} else {
-			fmt.Fprintln(w, "success.");
+			fmt.Fprintln(w, "no such file.");
 		}
 	}
 }
@@ -218,14 +227,18 @@ func remover(w http.ResponseWriter, r *http.Request) {
 	queryparm := r.URL.Query()
 
 	if v,ok:=queryparm["path"];ok{
-		paths,_,_ := dirwalk(v[0])
-		for _,fpath:=range paths{
-			if err := os.Remove(fpath); err != nil {
-				fmt.Println(err)
-			} else {
+		if Exists(v[0]) {
+			paths,_,_ := dirwalk(v[0])
+			for _,fpath:=range paths{
+				if err := os.Remove(fpath); err != nil {
+					fmt.Println(err)
+				} else {
+				}
 			}
+			fmt.Fprintln(w, "success.");
+		} else {
+			fmt.Fprintln(w, "no such file.");
 		}
-		fmt.Fprintln(w, "success.");
 	}
 }
 
