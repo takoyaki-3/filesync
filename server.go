@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"time"
 	"bytes"
+	"strings"
 	"net/http"
 	"crypto/sha256"
 	"encoding/json"
 	"path/filepath"
 	"io/ioutil"
 	"archive/zip"
+	"archive/tar"
+	"compress/gzip"
 )
 
 const port = ":11182"
@@ -35,9 +38,11 @@ func main(){
 	mux . HandleFunc("/upload", upload);
 	mux . HandleFunc("/download", download);
 	mux . HandleFunc("/remove", remove);
+	mux . HandleFunc("/remover", remover);
 	mux . HandleFunc("/getlist", getlist);
 	mux . HandleFunc("/chagekey",chagekey);
 	mux . HandleFunc("/unzip",unzip);
+	mux . HandleFunc("/untargz",untargz);
 
 	// http.Serverのオブジェクトを確保
 	// &をつけること構造体ではなくポインタを返却
@@ -68,7 +73,6 @@ func unzip(w http.ResponseWriter, r *http.Request) {
 	if !Authentication(w,r){
 		return
 	}
-	fmt.Fprintln(w, true);
 	queryparm := r.URL.Query()
 	if src,ok:=queryparm["path"];ok{
 		if dist,ok:=queryparm["dist"];ok{
@@ -80,6 +84,45 @@ func unzip(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	fmt.Fprintln(w, "fail");
+}
+
+func untargz(w http.ResponseWriter, r *http.Request){
+	if !Authentication(w,r){
+		return
+	}
+	queryparm := r.URL.Query()
+	if src,ok:=queryparm["path"];ok{
+		file, _ := os.Open(src[0])
+		defer file.Close()
+
+		// gzipの展開
+		gzipReader, _ := gzip.NewReader(file)
+		defer gzipReader.Close()
+
+		// tarの展開
+		tarReader := tar.NewReader(gzipReader)
+
+		for {
+			tarHeader, err := tarReader.Next()
+			if err == io.EOF {
+				break
+			}
+
+			bufsize := 1024
+			fullBuf := []byte{}
+			for {
+				buf := make([]byte,bufsize)
+				n,_ := tarReader.Read(buf)
+				fullBuf = append(fullBuf, buf[:n]...)
+				if n != bufsize {
+					break
+				}
+			}
+			fpath := strings.Replace(tarHeader.Name,"\\","/",-1)
+			os.MkdirAll(filepath.Dir(fpath), 0666)
+			WriteByte(fpath,fullBuf)
+		}
+	}
 }
 
 func upload(w http.ResponseWriter, r *http.Request) {
@@ -168,6 +211,24 @@ func remove(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func remover(w http.ResponseWriter, r *http.Request) {
+	if !Authentication(w,r){
+		return
+	}
+	queryparm := r.URL.Query()
+
+	if v,ok:=queryparm["path"];ok{
+		paths,_,_ := dirwalk(v[0])
+		for _,fpath:=range paths{
+			if err := os.Remove(fpath); err != nil {
+				fmt.Println(err)
+			} else {
+			}
+		}
+		fmt.Fprintln(w, "success.");
+	}
+}
+
 func dirwalk(dir string) ([]string,[]string,[]string) {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
@@ -192,7 +253,7 @@ func dirwalk(dir string) ([]string,[]string,[]string) {
 }
 
 func WriteByte(path string,rowData []byte){
-	wf, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+	wf, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
