@@ -15,6 +15,8 @@ import (
 	"archive/zip"
 )
 
+const port = ":11182"
+
 type FileInfos struct{
 	List []FileInfo `json:"list"`
 }
@@ -40,7 +42,7 @@ func main(){
 	// http.Serverのオブジェクトを確保
 	// &をつけること構造体ではなくポインタを返却
 	server := &http.Server{}; // or new (http.Server);
-	server.Addr = ":11182";
+	server.Addr = port;
 	server.Handler = mux;
 	server.ListenAndServe();
 }
@@ -161,7 +163,7 @@ func remove(w http.ResponseWriter, r *http.Request) {
 		if err := os.Remove(v[0]); err != nil {
 			fmt.Println(err)
 		} else {
-			fmt.Fprintln(w, "hello, world.");
+			fmt.Fprintln(w, "success.");
 		}
 	}
 }
