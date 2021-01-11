@@ -108,13 +108,13 @@ func untargz(w http.ResponseWriter, r *http.Request){
 				break
 			}
 
-			bufsize := 1024
+			bufsize := 1024*1024
 			fullBuf := []byte{}
 			for {
 				buf := make([]byte,bufsize)
-				n,_ := tarReader.Read(buf)
+				n,err := tarReader.Read(buf)
 				fullBuf = append(fullBuf, buf[:n]...)
-				if n != bufsize {
+				if err == io.EOF {
 					break
 				}
 			}

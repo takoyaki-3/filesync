@@ -10,6 +10,13 @@ import (
 	"crypto/sha256"
 )
 
+type Config struct {
+	Port     int    `json:"port"`
+	Hostname string `json:"hostname"`
+}
+
+// func 
+
 func ReadBytes(path string)[]byte{
 	file, err := os.Open(path)
 	defer file.Close()
