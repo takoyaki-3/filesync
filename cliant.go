@@ -11,8 +11,6 @@ import (
 	"github.com/takoyaki-3/filesync/pkg"
 )
 
-const APIEndpoint = "http://c3.d.takoyaki3.com:11182/"
-
 type FileInfos struct {
 	List []FileInfo `json:"list"`
 }
@@ -24,6 +22,7 @@ type FileInfo struct {
 }
 
 func main() {
+	conf := pkg.LoadConfig()
 
 	// ファイルリストを取得
 	infos := GetList("./data")
@@ -32,9 +31,9 @@ func main() {
 	for _, v := range infos.List {
 		fmt.Println(v.Path)
 		os.MkdirAll(v.Directory, 0777)
-		raw := GetHTTP(APIEndpoint + "download?sign=" + pkg.Sign() + "&path=" + v.Path)
+		raw := GetHTTP(pkg.APIEndpoint(conf) + "download?sign=" + pkg.Sign() + "&path=" + v.Path)
 		pkg.WriteByte(v.Path, raw)
-		GetHTTP(APIEndpoint + "remove?sign=" + pkg.Sign() + "&path=" + v.Path)
+		GetHTTP(pkg.APIEndpoint(conf) + "remove?sign=" + pkg.Sign() + "&path=" + v.Path)
 	}
 }
 
@@ -46,9 +45,10 @@ func GetHTTP(url string) []byte {
 }
 
 func GetList(path string) FileInfos {
+	conf := pkg.LoadConfig()
 	var infos FileInfos
-	raw := GetHTTP(APIEndpoint + "getlist?sign=" + pkg.Sign() + "&path=" + path)
-	fmt.Println(APIEndpoint + "getlist?sign=" + pkg.Sign() + "&path=" + path)
+	raw := GetHTTP(pkg.APIEndpoint(conf) + "getlist?sign=" + pkg.Sign() + "&path=" + path)
+	fmt.Println(pkg.APIEndpoint(conf) + "getlist?sign=" + pkg.Sign() + "&path=" + path)
 	if err := json.Unmarshal(raw, &infos); err != nil {
 		log.Fatal(err)
 	}
