@@ -15,11 +15,18 @@ func main() {
 	for{
 		time.Sleep(time.Second)
 		raw := GetHTTP(APIEndpoint + "auth?sign=" + pkg.Sign())
-		fmt.Println(string(raw))
+		if len(raw)==0{
+			fmt.Println("error,",time.Now())
+			continue
+		}
+		fmt.Println("ok,",time.Now())
 	}
 }
 func GetHTTP(url string) []byte {
-	resp, _ := http.Get(url)
+	resp, err := http.Get(url)
+	if err != nil {
+		return []byte{}
+	}
 	defer resp.Body.Close()
 	byteArray, _ := ioutil.ReadAll(resp.Body)
 	return byteArray
