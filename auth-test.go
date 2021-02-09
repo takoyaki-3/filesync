@@ -9,12 +9,12 @@ import (
 	"github.com/takoyaki-3/filesync/pkg"
 )
 
-const APIEndpoint = "http://c3.d.takoyaki3.com:11182/"
-
 func main() {
+	conf := pkg.LoadConfig()
+	
 	for{
 		time.Sleep(time.Second)
-		raw := GetHTTP(APIEndpoint + "auth?sign=" + pkg.Sign())
+		raw := GetHTTP(pkg.APIEndpoint(conf) + "auth?sign=" + pkg.Sign())
 		if len(raw)==0{
 			fmt.Println("error,",time.Now())
 			continue
