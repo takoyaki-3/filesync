@@ -7,10 +7,11 @@ import (
 	"github.com/takoyaki-3/filesync/pkg"
 )
 
-const APIEndpoint = "http://localhost:11182/"
+const pkg.APIEndpoint(conf) = "http://localhost:11182/"
 
 func main() {
-	res := GetHTTP(APIEndpoint+"unzip?sign="+pkg.Sign()+"&path=volume/TY.zip&dist=volume/TY")
+	conf := pkg.LoadConfig()
+	res := GetHTTP(pkg.APIEndpoint(conf)+"unzip?sign="+pkg.Sign()+"&path=volume/TY.zip&dist=volume/TY")
 	fmt.Println(res)
 }
 

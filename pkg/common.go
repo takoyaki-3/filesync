@@ -6,7 +6,9 @@ import (
 	"log"
 	"time"
   // "net/http"
-  // "io/ioutil"
+	"strconv"
+  "io/ioutil"
+	"encoding/json"
 	"crypto/sha256"
 )
 
@@ -53,4 +55,24 @@ func Sign()string{
 
 	hash := sha256.Sum256(append([]byte(now),key...))
 	return fmt.Sprintf("%x",hash)
+}
+
+func LoadConfig()Config{
+	// JSONファイル読み込み
+	bytes, err := ioutil.ReadFile("config.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	c := Config{}
+	
+	if err := json.Unmarshal(bytes, &c); err != nil {
+		log.Fatal(err)
+	}
+
+	return c
+}
+
+func APIEndpoint(conf Config)string{
+	return "http://"+conf.Hostname+":"+strconv.Itoa(conf.Port)+"/"
 }
